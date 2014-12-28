@@ -1,0 +1,212 @@
+From 752d83d05448d2a136b36372a097d3b5311fecc7 Mon Sep 17 00:00:00 2001
+From: Randall Hand <rhand@magicleap.com>
+Date: Fri, 1 Aug 2014 10:12:13 -0500
+Subject: [PATCH] Add extra filename sanity checking.
+
+Now filenames are checked per-character for alpha/num & .
+Where previously they were just excluded for a few bad chars.
+---
+ ytnef/src/ytnef/Makefile.am |  2 +-
+ ytnef/src/ytnef/main.c      | 26 ++++++++------------------
+ ytnef/src/ytnef/settings.h  |  2 ++
+ ytnef/src/ytnef/vcard.c     | 33 ++++++++++-----------------------
+ ytnef/src/ytnef/vtask.c     | 13 ++++++-------
+ 5 files changed, 27 insertions(+), 49 deletions(-)
+
+#diff --git a/ytnef/src/ytnef/Makefile.am b/ytnef/src/ytnef/Makefile.am
+#index 4c9ffbd..2e1ca76 100644
+#--- a/ytnef/src/ytnef/Makefile.am
+#+++ b/ytnef/src/ytnef/Makefile.am
+#@@ -4,4 +4,4 @@ bin_SCRIPTS = ytnefprocess.pl
+# ytnef_SOURCES = main.c
+# ytnef_LDADD = -lytnef
+# 
+#-EXTRA_DIST = vcal.c vcard.c vtask.c utility.c ytnefprocess.pl
+#+EXTRA_DIST = vcal.c vcard.c vtask.c utility.c settings.c ytnefprocess.pl
+diff --git a/ytnef/src/ytnef/main.c b/ytnef/src/ytnef/main.c
+index 51fc2d3..564de66 100644
+--- a/ytnef/src/ytnef/main.c
++++ b/ytnef/src/ytnef/main.c
+@@ -158,14 +158,13 @@ void ProcessTNEF(TNEFStruct TNEF) {
+                 int size;
+                 variableLength buf;
+                 if ((buf.data = DecompressRTF(filename, &(buf.size))) != NULL) {
+-                    if (filepath == NULL) {
+                         snprintf(ifilename, MAX_FILENAME_SIZE, "%s.rtf", TNEF.subject.data);
+-                    } else {
+-                        snprintf(ifilename, MAX_FILENAME_SIZE, "%s/%s.rtf", filepath, TNEF.subject.data);
+-                    }
+-                    for(i=0; i<strlen(ifilename); i++) 
+-                        if (ifilename[i] == ' ') 
+-                            ifilename[i] = '_';
++		    SanitizeFilename(ifilename);
++		    if (filepath != NULL) {
++                        char tmp[MAX_FILENAME_SIZE];
++                        memcpy(tmp, ifilename, MAX_FILENAME_SIZE);
++                        snprintf(ifilename, MAX_FILENAME_SIZE, "%s/%s", filepath, tmp);
++		    }
+ 
+                     printf("%s\n", ifilename);
+                     if ((fptr = fopen(ifilename, "wb"))==NULL) {
+@@ -259,14 +258,13 @@ void ProcessTNEF(TNEFStruct TNEF) {
+                     filename->data = (char*)malloc(20);
+                     snprintf(filename->data, 19, "file_%03i.dat", count);
+                 }
+-                if (filepath == NULL) {
+                     snprintf(ifilename, MAX_FILENAME_SIZE, "%s", filename->data);
+-                } else {
+-                    snprintf(ifilename, MAX_FILENAME_SIZE, "%s/%s", filepath, filename->data);
+-                }
+-                for(i=0; i<strlen(ifilename); i++) 
+-                    if (ifilename[i] == ' ') 
+-                        ifilename[i] = '_';
++		SanitizeFilename(ifilename);
++		if (filepath != NULL) {
++                    char tmp[MAX_FILENAME_SIZE];
++                    memcpy(tmp, ifilename, MAX_FILENAME_SIZE);
++                    snprintf(ifilename, MAX_FILENAME_SIZE, "%s/%s", filepath, tmp);
++		}
+                 printf("%s\n", ifilename);
+                 if (savefiles == 1) {
+                     if ((fptr = fopen(ifilename, "wb"))==NULL) {
+@@ -297,6 +295,6 @@ void ProcessTNEF(TNEFStruct TNEF) {
+ #include "vcal.c"
+ #include "vcard.c"
+ #include "vtask.c"
+-
++#include "settings.c"
+ 
+ 
+diff --git a/ytnef/src/ytnef/settings.h b/ytnef/src/ytnef/settings.h
+index 993e9cf..3ad4412 100644
+--- a/ytnef/src/ytnef/settings.h
++++ b/ytnef/src/ytnef/settings.h
+@@ -24,4 +24,6 @@
+ 
+ #define MAX_FILENAME_SIZE 1024
+ 
++void SanitizeFilename(char *filename);
++
+ #endif  // YTNEF_SRC_YTNEF_SETTINGS_H_
+diff --git a/ytnef/src/ytnef/vcard.c b/ytnef/src/ytnef/vcard.c
+index 2bfa17b..177e2fd 100644
+--- a/ytnef/src/ytnef/vcard.c
++++ b/ytnef/src/ytnef/vcard.c
+@@ -10,35 +10,22 @@ void SaveVCard(TNEFStruct TNEF) {
+     if ((vl = MAPIFindProperty(&(TNEF.MapiProperties), PROP_TAG(PT_STRING8, PR_DISPLAY_NAME))) == MAPI_UNDEFINED) {
+         if ((vl=MAPIFindProperty(&(TNEF.MapiProperties), PROP_TAG(PT_STRING8, PR_COMPANY_NAME))) == MAPI_UNDEFINED) {
+             if (TNEF.subject.size > 0) {
+-                if (filepath == NULL) {
+                     snprintf(ifilename, MAX_FILENAME_SIZE, "%s.vcard", TNEF.subject.data);
+-                } else {
+-                    snprintf(ifilename, MAX_FILENAME_SIZE, "%s/%s.vcard", filepath, TNEF.subject.data);
+-                }
+             } else {
+-                if (filepath == NULL) {
+                     snprintf(ifilename, MAX_FILENAME_SIZE, "unknown.vcard");
+-                } else {
+-                    snprintf(ifilename, MAX_FILENAME_SIZE, "%s/unknown.vcard", filepath);
+-                }
+             }
+         } else {
+-            if (filepath == NULL) {
+                 snprintf(ifilename, MAX_FILENAME_SIZE, "%s.vcard", vl->data);
+-            } else {
+-                snprintf(ifilename, MAX_FILENAME_SIZE, "%s/%s.vcard", filepath, vl->data);
+-            }
+         }
+     } else {
+-        if (filepath == NULL) {
+             snprintf(ifilename, MAX_FILENAME_SIZE, "%s.vcard", vl->data);
+-        } else {
+-            snprintf(ifilename, MAX_FILENAME_SIZE, "%s/%s.vcard", filepath, vl->data);
+-        }
+     }
+-    for(i=0; i<strlen(ifilename); i++) 
+-        if (ifilename[i] == ' ') 
+-            ifilename[i] = '_';
++    SanitizeFilename(ifilename);
++    if (filepath) {
++      char temp[MAX_FILENAME_SIZE];
++      memcpy(temp, ifilename, MAX_FILENAME_SIZE);
++      snprintf(ifilename, MAX_FILENAME_SIZE, "%s/%s", filepath, temp);
++    }
+     printf("%s\n", ifilename);
+ 
+     if (savefiles == 0) return;
+diff --git a/ytnef/src/ytnef/vtask.c b/ytnef/src/ytnef/vtask.c
+index 7624419..257528c 100644
+--- a/ytnef/src/ytnef/vtask.c
++++ b/ytnef/src/ytnef/vtask.c
+@@ -20,14 +20,13 @@ void SaveVTask(TNEFStruct TNEF) {
+     while (vl->data[index] == ' ') 
+             vl->data[index--] = 0;
+ 
+-    if (filepath == NULL) {
+         snprintf(ifilename, MAX_FILENAME_SIZE, "%s.vcf", vl->data);
+-    } else {
+-        snprintf(ifilename, MAX_FILENAME_SIZE, "%s/%s.vcf", filepath, vl->data);
++    SanitizeFilename(ifilename);
++    if (filepath) {
++      char temp[MAX_FILENAME_SIZE];
++      memcpy(temp, ifilename, MAX_FILENAME_SIZE);
++      snprintf(ifilename, MAX_FILENAME_SIZE, "%s/%s", filepath, temp);
+     }
+-    for(i=0; i<strlen(ifilename); i++) 
+-        if (ifilename[i] == ' ') 
+-            ifilename[i] = '_';
+     printf("%s\n", ifilename);
+ 
+     if (savefiles == 0) return;
+From 863467fed1dd9321f6461d6c2abcf6c67fe0a691 Mon Sep 17 00:00:00 2001
+From: Randall Hand <rhand@magicleap.com>
+Date: Fri, 1 Aug 2014 10:16:08 -0500
+Subject: [PATCH] Initial checkin of settings.c
+
+---
+ ytnef/src/ytnef/settings.c | 36 ++++++++++++++++++++++++++++++++++++
+ 1 file changed, 36 insertions(+)
+ create mode 100644 ytnef/src/ytnef/settings.c
+
+diff --git a/ytnef/src/ytnef/settings.c b/ytnef/src/ytnef/settings.c
+new file mode 100644
+index 0000000..a57e6c3
+--- /dev/null
++++ b/ytnef/src/ytnef/settings.c
+@@ -0,0 +1,36 @@
++/*
++*    Yerase's TNEF Stream Reader
++*    Copyright (C) 2003  Randall E. Hand
++*
++*    This program is free software; you can redistribute it and/or modify
++*    it under the terms of the GNU General Public License as published by
++*    the Free Software Foundation; either version 2 of the License, or
++*    (at your option) any later version.
++*
++*    This program is distributed in the hope that it will be useful,
++*    but WITHOUT ANY WARRANTY; without even the implied warranty of
++*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++*    GNU General Public License for more details.
++*
++*    You should have received a copy of the GNU General Public License
++*    along with this program; if not, write to the Free Software
++*    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++*
++*    You can contact me at randall.hand@gmail.com for questions or assistance
++*/
++
++#include "settings.h"
++
++
++// Replace every character in a filename (in place)
++// that is not a valid AlphaNumeric (a-z, A-Z, 0-9) or a period
++// with an underscore.
++void SanitizeFilename(char *filename) {
++  int i;
++  for (i = 0; i < strlen(filename); ++i) {
++    if (! (isalnum(filename[i]) || (filename[i] == '.'))) {
++      filename[i] = '_';
++    }
++  }
++}
++
