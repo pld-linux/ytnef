@@ -3,7 +3,7 @@ Summary:	Yerase's TNEF Stream Reader
 Summary(pl.UTF-8):	Czytnik strumieni TNET autorstwa Yerase
 Name:		ytnef
 Version:	2.6
-Release:	1
+Release:	2
 License:	GPL v2+
 Group:		Libraries
 # note: development continued on https://github.com/Yeraze/ytnef
