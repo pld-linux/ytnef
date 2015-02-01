@@ -1,0 +1,14 @@
+--- ytnef-2.6/src/ytnef/ytnefprocess.pl~	2003-08-25 19:11:57.000000000 +0200
++++ ytnef-2.6/src/ytnef/ytnefprocess.pl	2015-02-01 14:45:54.895888601 +0100
+@@ -2,10 +2,9 @@
+ use MIME::Parser;
+ use MIME::Entity;
+ use Mail::Mailer;
+-use Mail::Mailer::test;
+ 
+ my $mail_dir = "$ENV{HOME}/.ytnef";
+-my $reader = "/usr/local/bin/ytnef";
++my $reader = "/usr/bin/ytnef";
+ my $output_dir = "$mail_dir/output";
+ 
+ my $parser = new MIME::Parser;

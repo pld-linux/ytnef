@@ -3,7 +3,7 @@ Summary:	Yerase's TNEF Stream Reader
 Summary(pl.UTF-8):	Czytnik strumieni TNET autorstwa Yerase
 Name:		ytnef
 Version:	2.6
-Release:	2
+Release:	3
 License:	GPL v2+
 Group:		Libraries
 # note: development continued on https://github.com/Yeraze/ytnef
@@ -12,6 +12,7 @@ Source0:	http://downloads.sourceforge.net/ytnef/%{name}-%{version}.tar.gz
 Patch0:		%{name}-snprintf.patch
 Patch1:		%{name}-filenames.patch
 Patch2:		%{name}-snprintf2.patch
+Patch3:		fix-ytnefprocess.patch
 URL:		https://github.com/Yeraze/ytnef
 BuildRequires:	libytnef-devel
 BuildRequires:	rpm-perlprov
@@ -34,13 +35,9 @@ oraz wpisów kalendarza.
 %patch0 -p2
 %patch1 -p2
 %patch2 -p2
+%patch3 -p1
 
 %build
-#{__libtoolize}
-#{__aclocal}
-#{__autoconf}
-#{__autoheader}
-#{__automake}
 %configure
 %{__make}
 
