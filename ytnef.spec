@@ -1,9 +1,10 @@
+# NOTE: for versions >= 1:1.9 (after merge with libytnef) see libytnef.spec
 %include	/usr/lib/rpm/macros.perl
 Summary:	Yerase's TNEF Stream Reader
 Summary(pl.UTF-8):	Czytnik strumieni TNET autorstwa Yerase
 Name:		ytnef
 Version:	2.6
-Release:	3
+Release:	3.1
 License:	GPL v2+
 Group:		Libraries
 # note: development continued on https://github.com/Yeraze/ytnef
